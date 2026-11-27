@@ -18,14 +18,12 @@ public class DescarteEletronicoController {
     @Autowired
     private DescarteEletronicoRepository repository;
 
-
     @GetMapping
     public ResponseEntity<List<DescarteEletronico>> listarTodos() {
         List<DescarteEletronico> descartes = repository.findAll();
 
         return ResponseEntity.ok(descartes);
     }
-
 
     @GetMapping("/{id}")
     public ResponseEntity<DescarteEletronico> buscarPorId(@PathVariable Long id) {
@@ -38,28 +36,51 @@ public class DescarteEletronicoController {
         return ResponseEntity.notFound().build();
     }
 
-
     @PostMapping
     public ResponseEntity<DescarteEletronico> criar(
             @RequestBody DescarteEletronico descarte) {
+        descarte.setPontosGerados(0);
+        descarte.setValidado(false);
 
         DescarteEletronico novoDescarte = repository.save(descarte);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(novoDescarte);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<DescarteEletronico> atualizar(
+            @PathVariable Long id,
+            @RequestBody DescarteEletronico dados) {
+        Optional<DescarteEletronico> resultado = repository.findById(id);
+
+        if (resultado.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        DescarteEletronico descarte = resultado.get();
+        descarte.setMatriculaAluno(dados.getMatriculaAluno());
+        descarte.setTipoItem(dados.getTipoItem());
+        descarte.setPesoGramas(dados.getPesoGramas());
+
+        DescarteEletronico atualizado = repository.save(descarte);
+
+        return ResponseEntity.ok(atualizado);
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        Optional<DescarteEletronico> resultado = repository.findById(id);
+
+        if (resultado.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
         repository.deleteById(id);
 
         return ResponseEntity.noContent().build();
     }
-
     @PostMapping("/{id}/computar-pontos")
     public ResponseEntity<DescarteEletronico> computarPontos(
             @PathVariable Long id) {
-
         Optional<DescarteEletronico> resultado = repository.findById(id);
 
         if (resultado.isEmpty()) {
@@ -83,13 +104,10 @@ public class DescarteEletronicoController {
         } else {
             fator = 2;
         }
-
         descarte.setPontosGerados(
                 (int) (descarte.getPesoGramas() / 100.0 * fator)
         );
-
         descarte.setValidado(true);
-
         repository.save(descarte);
 
         return ResponseEntity.ok(descarte);
