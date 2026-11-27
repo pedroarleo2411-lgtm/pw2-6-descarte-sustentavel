@@ -18,7 +18,7 @@ public class DescarteEletronicoController {
     @Autowired
     private DescarteEletronicoRepository repository;
 
-    // GET - Listar todos os descartes
+
     @GetMapping
     public ResponseEntity<List<DescarteEletronico>> listarTodos() {
         List<DescarteEletronico> descartes = repository.findAll();
@@ -26,7 +26,7 @@ public class DescarteEletronicoController {
         return ResponseEntity.ok(descartes);
     }
 
-    // GET - Buscar descarte por ID
+
     @GetMapping("/{id}")
     public ResponseEntity<DescarteEletronico> buscarPorId(@PathVariable Long id) {
         Optional<DescarteEletronico> descarte = repository.findById(id);
@@ -38,7 +38,7 @@ public class DescarteEletronicoController {
         return ResponseEntity.notFound().build();
     }
 
-    // POST - Criar novo descarte
+
     @PostMapping
     public ResponseEntity<DescarteEletronico> criar(
             @RequestBody DescarteEletronico descarte) {
@@ -48,11 +48,50 @@ public class DescarteEletronicoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(novoDescarte);
     }
 
-    // DELETE - Excluir descarte por ID
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         repository.deleteById(id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/computar-pontos")
+    public ResponseEntity<DescarteEletronico> computarPontos(
+            @PathVariable Long id) {
+
+        Optional<DescarteEletronico> resultado = repository.findById(id);
+
+        if (resultado.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        DescarteEletronico descarte = resultado.get();
+
+        if (descarte.getValidado()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        int fator = 1;
+
+        if (descarte.getTipoItem().equals("BATERIA")) {
+            fator = 5;
+        } else if (descarte.getTipoItem().equals("PLACA")) {
+            fator = 4;
+        } else if (descarte.getTipoItem().equals("CELULAR_ANTIGO")) {
+            fator = 10;
+        } else {
+            fator = 2;
+        }
+
+        descarte.setPontosGerados(
+                (int) (descarte.getPesoGramas() / 100.0 * fator)
+        );
+
+        descarte.setValidado(true);
+
+        repository.save(descarte);
+
+        return ResponseEntity.ok(descarte);
     }
 }
